@@ -1,0 +1,29 @@
+[package]
+name = "s-expr-core"
+version = "0.1.0"
+edition = "2021"
+description = "Shared S-expression core with spans, errors, and canonical pretty-printing"
+license = "Apache-2.0"
+repository = "https://github.com/vkozio/s-expr-core"
+readme = "README.md"
+keywords = ["s-expression", "parser", "sexp"]
+categories = ["parsing", "data-structures", "development-tools"]
+
+[dependencies]
+thiserror = "1"
+serde = { version = "1", features = ["derive"], optional = true }
+
+[features]
+default = []
+serde = ["dep:serde"]
+
+[dev-dependencies]
+criterion = "0.5"
+
+[[bench]]
+name = "parse_pretty"
+harness = false
+
+[workspace]
+members = ["fuzz", "wasm"]
+

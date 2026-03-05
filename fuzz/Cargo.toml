@@ -1,0 +1,33 @@
+[package]
+name = "s-expr-core-fuzz"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = { version = "0.4", features = ["arbitrary-derive"] }
+
+[dependencies.s-expr-core]
+path = ".."
+
+[profile.dev]
+debug = 1
+
+[profile.release]
+debug = 1
+
+[[bin]]
+name = "fuzz_parse_never_panics"
+path = "fuzz_targets/parse_never_panics.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_roundtrip"
+path = "fuzz_targets/roundtrip.rs"
+test = false
+doc = false
+

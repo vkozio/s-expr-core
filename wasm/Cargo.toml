@@ -1,0 +1,17 @@
+[package]
+name = "s-expr-core-wasm"
+version = "0.1.0"
+edition = "2021"
+description = "WASM bindings for the s-expr-core library"
+license = "Apache-2.0"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen = "0.2"
+serde = { version = "1", features = ["derive"] }
+serde-wasm-bindgen = "0.6"
+s-expr-core = { path = "..", features = ["serde"] }
+

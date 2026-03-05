@@ -1,0 +1,19 @@
+{
+  "name": "s-expr-core-wasm",
+  "version": "0.1.0",
+  "description": "WASM bindings for the s-expr-core Rust library",
+  "author": "vkozio",
+  "main": "web/pkg/s_expr_core_wasm.js",
+  "module": "web/pkg/s_expr_core_wasm.js",
+  "types": "web/pkg/s_expr_core_wasm.d.ts",
+  "files": [
+    "web/pkg"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build:wasm": "wasm-pack build wasm --target bundler --out-dir web/pkg",
+    "check:rust": "cargo fmt --all -- --check && cargo clippy --all-targets --all-features -- -D warnings && cargo test --all",
+    "cov:rust": "cargo llvm-cov --all-features --workspace",
+    "bench:rust": "cargo bench --bench parse_pretty"
+  }
+}
