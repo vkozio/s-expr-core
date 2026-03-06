@@ -62,7 +62,7 @@ jobs:
           curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
       - name: Build WASM package (bundler target)
-        run: wasm-pack build wasm --target bundler --out-dir web/pkg
+        run: wasm-pack build wasm --target bundler --out-dir ../web/pkg
 
       - name: Ensure web/pkg is up to date in git
         run: git diff --exit-code web/pkg

@@ -147,3 +147,69 @@ pub fn pretty_print_s_expr(input: &str) -> Result<String, JsValue> {
     let nodes = parse(input).map_err(js_error)?;
     Ok(pretty_print(&nodes))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn js_position_and_span_match_core_values() {
+        let start = Position::start();
+        let end = Position {
+            byte: 5,
+            line: 1,
+            column: 6,
+        };
+        let span = Span::new(start, end);
+
+        let js_pos = js_position(start);
+        assert_eq!(js_pos.byte, start.byte);
+        assert_eq!(js_pos.line, start.line);
+        assert_eq!(js_pos.column, start.column);
+
+        let js_span = js_span(span);
+        assert_eq!(js_span.start.byte, start.byte);
+        assert_eq!(js_span.end.byte, end.byte);
+    }
+
+    #[test]
+    fn js_atom_and_node_structure() {
+        let span = Span::new(Position::start(), Position::start());
+
+        let int_atom = AtomKind::Integer(42);
+        let kw_atom = AtomKind::Keyword("kw".to_string());
+
+        let int_node = Node {
+            expr: Expr::Atom(int_atom),
+            span,
+        };
+        let kw_node = Node {
+            expr: Expr::Atom(kw_atom),
+            span,
+        };
+        let list_node = Node {
+            expr: Expr::List(vec![int_node, kw_node]),
+            span,
+        };
+
+        let js = js_node(list_node);
+        match js.expr {
+            JsExpr::List { children } => {
+                assert_eq!(children.len(), 2);
+                match &children[0].expr {
+                    JsExpr::Atom {
+                        atom: JsAtom::Integer { value },
+                    } => assert_eq!(*value, 42),
+                    _ => panic!("expected integer atom"),
+                }
+                match &children[1].expr {
+                    JsExpr::Atom {
+                        atom: JsAtom::Keyword { value },
+                    } => assert_eq!(value, "kw"),
+                    _ => panic!("expected keyword atom"),
+                }
+            }
+            _ => panic!("expected list expr"),
+        }
+    }
+}
