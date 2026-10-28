@@ -1,6 +1,7 @@
 use crate::dialect::DialectConfig;
 use crate::error::{ErrorDetails, ParseError, ParseErrorCode};
 use crate::span::{Position, Span};
+use crate::trivia::Comment;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TokenKind {
@@ -25,6 +26,8 @@ pub struct Lexer<'a> {
     lookahead: Option<(usize, char)>,
     pos: Position,
     dialect: &'a DialectConfig,
+    collect_comments: bool,
+    comments: Vec<Comment>,
 }
 
 impl<'a> Lexer<'a> {
@@ -36,7 +39,20 @@ impl<'a> Lexer<'a> {
             lookahead,
             pos: Position::start(),
             dialect,
+            collect_comments: false,
+            comments: Vec::new(),
         }
+    }
+
+    /// Enable (or disable) collection of comment trivia.
+    pub fn with_collect_comments(mut self, collect: bool) -> Self {
+        self.collect_comments = collect;
+        self
+    }
+
+    /// Return the comments collected so far, in source order.
+    pub fn take_comments(&mut self) -> Vec<Comment> {
+        std::mem::take(&mut self.comments)
     }
 
     pub fn position(&self) -> Position {
@@ -83,11 +99,25 @@ impl<'a> Lexer<'a> {
             if self.dialect.enable_comments {
                 if let Some((_idx, ch)) = self.peek() {
                     if ch == self.dialect.comment_prefix {
-                        // consume until end of line or input
-                        while let Some((_i, ch)) = self.bump() {
+                        let start = self.pos;
+                        self.bump();
+                        let mut text = String::new();
+                        while let Some((_i, ch)) = self.peek() {
                             if ch == '\n' {
                                 break;
                             }
+                            self.bump();
+                            text.push(ch);
+                        }
+                        if text.ends_with('\r') {
+                            text.pop();
+                        }
+                        let end = self.pos;
+                        if self.collect_comments {
+                            self.comments.push(Comment {
+                                text,
+                                span: Span::new(start, end),
+                            });
                         }
                         advanced = true;
                     }

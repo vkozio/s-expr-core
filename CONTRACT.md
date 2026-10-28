@@ -291,6 +291,18 @@ Then:
 
 This requirement is normative: a conforming implementation MUST treat roundtrip preservation of the logical tree as a hard invariant.
 
+## 8.3 Trivia
+
+Comments are interleaved into a parse as trivia:
+
+- `parse_with_trivia` MUST return the same top-level nodes as `parse_with_dialect`, plus every comment encountered in source order as a `Comment` value.
+- A `Comment` MUST carry the comment body without its prefix character, with a trailing `\r` trimmed, plus its `Span`.
+- `pretty_print_with_comments(nodes, comments)` MUST equal `pretty_print(nodes)` when `comments` is empty.
+- With comments present, each comment MUST be emitted on its own line as `;` followed by its text, before the node that follows it in the source, at that node's indentation.
+- Comments after the last element of a list MUST stay inside the list before `)`; comments after the last top-level node MUST be emitted at the end.
+- A comment on the same line after a node MAY move to its own line.
+- The roundtrip invariant MUST also hold for trivia: reparsing the pretty-printed output preserves the node structure (modulo spans) and the comment texts in the same order.
+
 # 9. Dialect Configuration and Resource Limits
 
 ## 9.1 Dialect configuration

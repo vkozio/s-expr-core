@@ -1,4 +1,5 @@
 use crate::ast::{AtomKind, Expr, Node};
+use crate::trivia::Comment;
 
 /// Canonical pretty-printer for S-expression trees.
 ///
@@ -86,4 +87,94 @@ fn fmt_atom(atom: &AtomKind, out: &mut String) {
             out.push_str(k);
         }
     }
+}
+
+/// Pretty-print the tree with comment trivia interleaved.
+///
+/// When `comments` is empty this returns exactly what [`pretty_print`] returns.
+/// Otherwise each comment is emitted on its own line, using `;`, before the node
+/// that follows it in the source at that node's indentation. Comments after the
+/// last element of a list stay inside the list before `)`; comments after the
+/// last top-level node are emitted at the end. A comment that originally shared
+/// a line with a node may move to its own line.
+pub fn pretty_print_with_comments(nodes: &[Node], comments: &[Comment]) -> String {
+    if comments.is_empty() {
+        return pretty_print(nodes);
+    }
+    let mut comments: Vec<Comment> = comments.to_vec();
+    comments.sort_by_key(|c| (c.span.start.byte, c.span.start.line, c.span.start.column));
+    let mut cursor = 0usize;
+    let mut lines: Vec<String> = Vec::new();
+    for node in nodes {
+        fmt_node(node, &comments, &mut cursor, 0, &mut lines);
+    }
+    while cursor < comments.len() {
+        lines.push(format!(";{}", comments[cursor].text));
+        cursor += 1;
+    }
+    lines.join("\n")
+}
+
+fn fmt_node(
+    node: &Node,
+    comments: &[Comment],
+    cursor: &mut usize,
+    depth: usize,
+    lines: &mut Vec<String>,
+) {
+    let indent = indent_str(depth);
+    while *cursor < comments.len() && comments[*cursor].span.end.byte <= node.span.start.byte {
+        lines.push(format!("{indent};{}", comments[*cursor].text));
+        *cursor += 1;
+    }
+    let inner_comment =
+        *cursor < comments.len() && comments[*cursor].span.start.byte < node.span.end.byte;
+    let children = match &node.expr {
+        Expr::List(children) if inner_comment => children,
+        // No comment inside: the same text as `pretty_print`.
+        expr => {
+            let mut s = String::new();
+            fmt_expr(expr, &mut s);
+            lines.push(format!("{indent}{s}"));
+            return;
+        }
+    };
+    // A list with comments inside breaks: its leading atoms stay on the `(` line until the first
+    // comment, then one element per line, `)` at the end of the last element's line.
+    let mut rest = &children[..];
+    let mut open = format!("{indent}(");
+    while let Some(first) = rest.first() {
+        let comment_before = comments[*cursor].span.end.byte <= first.span.start.byte;
+        if !matches!(first.expr, Expr::Atom(_)) || comment_before {
+            break;
+        }
+        if rest.len() < children.len() {
+            open.push(' ');
+        }
+        fmt_expr(&first.expr, &mut open);
+        rest = &rest[1..];
+    }
+    lines.push(open);
+    for child in rest {
+        fmt_node(child, comments, cursor, depth + 1, lines);
+    }
+    let mut last_is_comment = false;
+    while *cursor < comments.len() && comments[*cursor].span.start.byte < node.span.end.byte {
+        lines.push(format!(
+            "{};{}",
+            indent_str(depth + 1),
+            comments[*cursor].text
+        ));
+        *cursor += 1;
+        last_is_comment = true;
+    }
+    if last_is_comment {
+        lines.push(format!("{indent})"));
+    } else if let Some(last) = lines.last_mut() {
+        last.push(')');
+    }
+}
+
+fn indent_str(depth: usize) -> String {
+    "  ".repeat(depth)
 }

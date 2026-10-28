@@ -4,6 +4,7 @@ use crate::error::{ErrorDetails, LimitKind, ParseError, ParseErrorCode};
 use crate::lexer::{Lexer, TokenKind};
 use crate::limits::Limits;
 use crate::span::{Position, Span};
+use crate::trivia::Comment;
 
 /// Parse using the default dialect and default limits.
 pub fn parse(input: &str) -> Result<Vec<Node>, ParseError> {
@@ -21,7 +22,26 @@ pub fn parse_with_limit(
     dialect: &DialectConfig,
     limits: &Limits,
 ) -> Result<Vec<Node>, ParseError> {
-    let mut lexer = Lexer::new(input, dialect);
+    parse_with_limit_inner(input, dialect, limits, false).map(|(nodes, _)| nodes)
+}
+
+/// Parse using a specific dialect and its embedded limits, returning the same
+/// top-level nodes as [`parse_with_dialect`] plus all comments encountered in
+/// source order as trivia.
+pub fn parse_with_trivia(
+    input: &str,
+    dialect: &DialectConfig,
+) -> Result<(Vec<Node>, Vec<Comment>), ParseError> {
+    parse_with_limit_inner(input, dialect, &dialect.limits, true)
+}
+
+fn parse_with_limit_inner(
+    input: &str,
+    dialect: &DialectConfig,
+    limits: &Limits,
+    collect_comments: bool,
+) -> Result<(Vec<Node>, Vec<Comment>), ParseError> {
+    let mut lexer = Lexer::new(input, dialect).with_collect_comments(collect_comments);
     let mut roots: Vec<Node> = Vec::new();
     let mut stack: Vec<(Vec<Node>, Position)> = Vec::new();
     let mut total_nodes: usize = 0;
@@ -145,7 +165,7 @@ pub fn parse_with_limit(
         ));
     }
 
-    Ok(roots)
+    Ok((roots, lexer.take_comments()))
 }
 
 fn push_atom(
