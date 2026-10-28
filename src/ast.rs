@@ -16,6 +16,8 @@ pub enum AtomKind {
 pub enum Expr {
     List(Vec<Node>),
     Atom(AtomKind),
+    /// Raw text of an unparseable piece (produced only by recovering parsing).
+    Error(String),
 }
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]

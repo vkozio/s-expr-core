@@ -12,6 +12,7 @@ fn atom_kinds(nodes: &[Node]) -> Vec<AtomKind> {
                     collect(&c.expr, out);
                 }
             }
+            Expr::Error(_) => {}
         }
     }
     let mut out = Vec::new();

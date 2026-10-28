@@ -22,6 +22,7 @@ pub fn node_at<'a>(nodes: &'a [Node], byte: u32) -> Vec<&'a Node> {
                 match &node.expr {
                     Expr::List(children) => current = children,
                     Expr::Atom(_) => break,
+                    Expr::Error(_) => break,
                 }
             }
             None => break,

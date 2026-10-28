@@ -7,6 +7,7 @@ fn strip(node: &Node) -> Node {
     let expr = match &node.expr {
         Expr::Atom(a) => Expr::Atom(a.clone()),
         Expr::List(children) => Expr::List(children.iter().map(strip).collect()),
+        Expr::Error(t) => Expr::Error(t.clone()),
     };
     Node {
         expr,

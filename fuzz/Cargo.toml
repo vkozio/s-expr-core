@@ -31,3 +31,9 @@ path = "fuzz_targets/roundtrip.rs"
 test = false
 doc = false
 
+[[bin]]
+name = "fuzz_parse_recovering"
+path = "fuzz_targets/parse_recovering.rs"
+test = false
+doc = false
+

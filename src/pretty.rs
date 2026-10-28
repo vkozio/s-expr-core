@@ -31,6 +31,7 @@ fn fmt_expr(expr: &Expr, out: &mut String) {
             }
             out.push(')');
         }
+        Expr::Error(text) => out.push_str(text),
     }
 }
 

@@ -380,3 +380,36 @@ This section is informative and does not add new normative requirements.
 
 Consumers SHOULD avoid embedding domain-specific semantics into the S-expression core itself and SHOULD instead treat it strictly as a reusable frontend and normalization layer.
 
+# 12. Recovery
+
+Recovering parsing turns a broken, half-typed file into a tree plus all errors. It is an additive capability provided alongside the strict `parse*` functions.
+
+## 12.1 Expr::Error
+
+The `Expr` data model gains a variant `Error(String)` carrying the raw text of an unparseable piece, together with its `Span`.
+
+- The strict `parse*` functions MUST NOT yield `Expr::Error`; they keep their signatures and behavior.
+- `Expr::Error` is produced only by the recovering parser.
+- The printer prints an `Expr::Error` node by emitting its raw text verbatim.
+
+## 12.2 Recovered
+
+`parse_recovering(input, dialect)` returns a `Recovered` value:
+
+- `nodes: Vec<Node>`
+- `comments: Vec<Comment>`
+- `errors: Vec<ParseError>`
+
+It never fails and never panics.
+
+## 12.3 Recovery rules
+
+- An unexpected `)` is an error and is skipped.
+- EOF inside lists closes every open list; an `UnbalancedParen` error is reported at each open paren, with the error span equal to the `(`.
+- An unterminated string ends at end of line: an error is reported, the string node keeps the text up to there, and parsing continues on the next line.
+- A bad atom becomes an `Expr::Error(raw)` node plus an error.
+- A limit exceeded is an error; the subtree is replaced by one `Expr::Error` node covering it.
+- Spans stay monotone and inside the input.
+- On valid input, `parse_recovering` returns the same nodes and comments as `parse_with_trivia` and no errors.
+- `errors` are sorted by span start (then end), so an `UnbalancedParen` found at EOF sits at its open paren's place in the list.
+

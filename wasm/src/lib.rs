@@ -38,6 +38,7 @@ enum JsAtom {
 enum JsExpr {
     Atom { atom: JsAtom },
     List { children: Vec<JsNode> },
+    Error { value: String },
 }
 
 #[derive(Serialize)]
@@ -92,6 +93,7 @@ fn js_expr(expr: Expr, span: Span) -> JsExpr {
                 children: js_children,
             }
         }
+        Expr::Error(text) => JsExpr::Error { value: text },
     }
 }
 

@@ -16,6 +16,7 @@ fn to_logical_expr(expr: &Expr) -> LogicalExpr {
                 .collect::<Vec<LogicalExpr>>();
             LogicalExpr::List(logical_children)
         }
+        Expr::Error(text) => panic!("unexpected error expr: {text}"),
     }
 }
 

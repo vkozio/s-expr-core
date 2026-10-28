@@ -1,6 +1,6 @@
 [package]
 name = "s-expr-core"
-version = "0.2.1"
+version = "0.3.0"
 edition = "2021"
 description = "Shared S-expression core with spans, errors, and canonical pretty-printing"
 license = "Apache-2.0"
