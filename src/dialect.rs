@@ -9,6 +9,8 @@ pub struct DialectConfig {
     pub comment_prefix: char,
     /// Whether booleans like `true` / `false` are recognized as a distinct atom kind.
     pub enable_booleans: bool,
+    /// Whether floating-point literals like `1.5` are recognized as a distinct atom kind.
+    pub enable_floats: bool,
     /// Whether keywords like `:foo` are recognized as a distinct atom kind.
     pub enable_keywords: bool,
     /// Resource limits for parsing; see Limits for details.
@@ -22,6 +24,7 @@ impl DialectConfig {
             enable_comments: true,
             comment_prefix: ';',
             enable_booleans: true,
+            enable_floats: true,
             enable_keywords: true,
             limits: Limits::default(),
         }

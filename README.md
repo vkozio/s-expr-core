@@ -18,11 +18,11 @@ s-expr-core = { git = "https://github.com/vkozio/s-expr-core.git", branch = "mai
 s-expr-core = "0.1"
 ```
 
-**API:** Types `Span`, `Position`, `AtomKind`, `Expr`, `Node`, `DialectConfig`, `Limits`, `ParseError`, `ParseErrorCode`, `ErrorDetails`. Functions: `parse`, `parse_with_dialect`, `parse_with_limit`, `pretty_print`. Iterators: `ExprIter`, `AtomIter`. See [CONTRACT.md](CONTRACT.md) for the full contract and grammar.
+**API:** Types `Span`, `Position`, `AtomKind`, `Expr`, `Node`, `DialectConfig`, `Limits`, `ParseError`, `ParseErrorCode`, `ErrorDetails`. Functions: `parse`, `parse_with_dialect`, `parse_with_limit`, `pretty_print`, `node_at`. Iterators: `ExprIter`, `AtomIter`. Helpers: `LineIndex`. See [CONTRACT.md](CONTRACT.md) for the full contract and grammar.
 
-## Example
+**Changelog:** v0.2.0 adds the `AtomKind::Float` atom (lexed from literals like `1.5`, `-0.25`, `1e9`, `2.5E-3`; gated by `DialectConfig::enable_floats`, default on), plus `node_at` and `LineIndex`.
 
-```rust
+## Example```rust
 use s_expr_core::{parse, pretty_print, AtomKind, ExprIter};
 
 let nodes = parse("(foo 1 (true :kw))").expect("parse ok");

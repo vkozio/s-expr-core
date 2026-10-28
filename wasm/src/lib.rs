@@ -28,6 +28,7 @@ enum JsAtom {
     Symbol { value: String },
     String { value: String },
     Integer { value: i64 },
+    Float { value: f64 },
     Boolean { value: bool },
     Keyword { value: String },
 }
@@ -74,6 +75,7 @@ fn js_atom(atom: AtomKind) -> JsAtom {
         AtomKind::Symbol(s) => JsAtom::Symbol { value: s },
         AtomKind::String(s) => JsAtom::String { value: s },
         AtomKind::Integer(i) => JsAtom::Integer { value: i },
+        AtomKind::Float(f) => JsAtom::Float { value: f },
         AtomKind::Boolean(b) => JsAtom::Boolean { value: b },
         AtomKind::Keyword(k) => JsAtom::Keyword { value: k },
     }

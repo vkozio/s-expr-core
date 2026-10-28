@@ -89,6 +89,17 @@ pub fn parse_with_limit(
                     limits,
                 )?;
             }
+            TokenKind::Float(f) => {
+                let atom = AtomKind::Float(f);
+                push_atom(
+                    atom,
+                    token.span,
+                    &mut roots,
+                    &mut stack,
+                    &mut total_nodes,
+                    limits,
+                )?;
+            }
             TokenKind::String(s) => {
                 let atom = AtomKind::String(s);
                 push_atom(

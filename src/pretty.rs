@@ -68,6 +68,16 @@ fn fmt_atom(atom: &AtomKind, out: &mut String) {
         AtomKind::Integer(i) => {
             out.push_str(&i.to_string());
         }
+        AtomKind::Float(f) => {
+            let s = f.to_string();
+            out.push_str(&s);
+            // Ensure the printed form reads back as a float (always a '.' or exponent).
+            // A non-finite value (only built by hand; the lexer never yields one) prints as
+            // `NaN` / `inf` / `-inf` and reads back as a symbol.
+            if f.is_finite() && !s.contains('.') && !s.contains('e') && !s.contains('E') {
+                out.push_str(".0");
+            }
+        }
         AtomKind::Boolean(b) => {
             out.push_str(if *b { "true" } else { "false" });
         }

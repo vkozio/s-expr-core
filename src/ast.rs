@@ -6,6 +6,7 @@ pub enum AtomKind {
     Symbol(String),
     String(String),
     Integer(i64),
+    Float(f64),
     Boolean(bool),
     Keyword(String),
 }

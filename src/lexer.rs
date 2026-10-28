@@ -8,6 +8,7 @@ pub enum TokenKind {
     RParen,
     Symbol(String),
     Integer(i64),
+    Float(f64),
     String(String),
     Boolean(bool),
     Keyword(String),
@@ -247,6 +248,12 @@ impl<'a> Lexer<'a> {
             return Ok(Some(int_token));
         }
 
+        if self.dialect.enable_floats {
+            if let Some(float_token) = self.try_lex_float(&buf, span) {
+                return Ok(Some(float_token));
+            }
+        }
+
         Ok(Some(Token {
             kind: TokenKind::Symbol(buf),
             span,
@@ -273,6 +280,37 @@ impl<'a> Lexer<'a> {
                     });
                 }
             }
+        }
+        None
+    }
+
+    fn try_lex_float(&self, text: &str, span: Span) -> Option<Token> {
+        let mut chars = text.chars();
+        let first = chars.next()?;
+        let starts_with_digit = match first {
+            '-' => chars.next()?.is_ascii_digit(),
+            c => c.is_ascii_digit(),
+        };
+        if !starts_with_digit {
+            return None;
+        }
+        // A float must contain a decimal point or an exponent; otherwise it is an integer
+        // or a plain symbol (e.g. `nan`, `inf`).
+        if !text.contains('.') && !text.contains('e') && !text.contains('E') {
+            return None;
+        }
+        // Overflow (`1e999` -> inf) stays a symbol: a Float atom is always finite.
+        if let Ok(value) = text.parse::<f64>().map_err(|_| ()).and_then(|v| {
+            if v.is_finite() {
+                Ok(v)
+            } else {
+                Err(())
+            }
+        }) {
+            return Some(Token {
+                kind: TokenKind::Float(value),
+                span,
+            });
         }
         None
     }
