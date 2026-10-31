@@ -82,7 +82,7 @@ fn js_atom(atom: AtomKind) -> JsAtom {
     }
 }
 
-fn js_expr(expr: Expr, span: Span) -> JsExpr {
+fn js_expr(expr: Expr) -> JsExpr {
     match expr {
         Expr::Atom(atom) => JsExpr::Atom {
             atom: js_atom(atom),
@@ -99,7 +99,7 @@ fn js_expr(expr: Expr, span: Span) -> JsExpr {
 
 fn js_node(node: Node) -> JsNode {
     let span = node.span;
-    let expr = js_expr(node.expr, span);
+    let expr = js_expr(node.expr);
     JsNode {
         expr,
         span: js_span(span),
@@ -111,6 +111,7 @@ fn js_error(err: ParseError) -> JsValue {
         ParseErrorCode::UnexpectedEof => "UnexpectedEof",
         ParseErrorCode::UnbalancedParen => "UnbalancedParen",
         ParseErrorCode::UnterminatedString => "UnterminatedString",
+        ParseErrorCode::UnterminatedBlockComment => "UnterminatedBlockComment",
         ParseErrorCode::InvalidAtom => "InvalidAtom",
         ParseErrorCode::LimitExceeded(_) => "LimitExceeded",
     }
