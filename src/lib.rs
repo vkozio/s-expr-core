@@ -2,6 +2,8 @@ mod ast;
 mod dialect;
 mod error;
 mod iter;
+#[cfg(feature = "json")]
+mod json;
 mod lexer;
 mod limits;
 mod line_index;
@@ -19,6 +21,8 @@ pub use crate::ast::{AtomKind, Expr, Node};
 pub use crate::dialect::DialectConfig;
 pub use crate::error::{ErrorDetails, ParseError, ParseErrorCode};
 pub use crate::iter::{AtomIter, ExprIter};
+#[cfg(feature = "json")]
+pub use crate::json::{expr_to_value, node_to_value, value_to_expr, value_to_node, JsonError};
 pub use crate::limits::Limits;
 pub use crate::line_index::LineIndex;
 pub use crate::locate::node_at;
