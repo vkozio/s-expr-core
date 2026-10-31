@@ -81,7 +81,7 @@ impl Node {
     }
 
     /// The value if this node is an integer atom, else `None`.
-    pub fn as_integer(&self) -> Option<i64> {
+    pub const fn as_integer(&self) -> Option<i64> {
         match &self.expr {
             Expr::Atom(AtomKind::Integer(n)) => Some(*n),
             _ => None,
@@ -89,7 +89,7 @@ impl Node {
     }
 
     /// The value if this node is a float atom, else `None`.
-    pub fn as_float(&self) -> Option<f64> {
+    pub const fn as_float(&self) -> Option<f64> {
         match &self.expr {
             Expr::Atom(AtomKind::Float(f)) => Some(*f),
             _ => None,
@@ -97,7 +97,7 @@ impl Node {
     }
 
     /// The value if this node is a boolean atom, else `None`.
-    pub fn as_bool(&self) -> Option<bool> {
+    pub const fn as_bool(&self) -> Option<bool> {
         match &self.expr {
             Expr::Atom(AtomKind::Boolean(b)) => Some(*b),
             _ => None,

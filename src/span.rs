@@ -27,7 +27,7 @@ pub struct Span {
 }
 
 impl Span {
-    pub fn new(start: Position, end: Position) -> Self {
+    pub const fn new(start: Position, end: Position) -> Self {
         Span { start, end }
     }
 }

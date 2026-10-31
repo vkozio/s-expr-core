@@ -45,7 +45,7 @@ impl<'a> Lexer<'a> {
     }
 
     /// Enable (or disable) collection of comment trivia.
-    pub fn with_collect_comments(mut self, collect: bool) -> Self {
+    pub const fn with_collect_comments(mut self, collect: bool) -> Self {
         self.collect_comments = collect;
         self
     }
@@ -55,7 +55,7 @@ impl<'a> Lexer<'a> {
         std::mem::take(&mut self.comments)
     }
 
-    pub fn position(&self) -> Position {
+    pub const fn position(&self) -> Position {
         self.pos
     }
 
@@ -70,7 +70,7 @@ impl<'a> Lexer<'a> {
                 self.pos.column += 1;
             }
             // byte offset always reflects the index of the *next* character
-            self.pos.byte = (idx + ch.len_utf8()) as u32;
+            self.pos.byte = u32::try_from(idx + ch.len_utf8()).unwrap_or(u32::MAX);
         }
         self.lookahead = self.iter.next();
         current

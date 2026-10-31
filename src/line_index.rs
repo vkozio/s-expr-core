@@ -11,7 +11,7 @@ impl LineIndex {
         let mut line_starts = vec![0u32];
         for (i, b) in text.bytes().enumerate() {
             if b == b'\n' {
-                line_starts.push((i + 1) as u32);
+                line_starts.push(u32::try_from(i + 1).unwrap_or(u32::MAX));
             }
         }
         LineIndex {

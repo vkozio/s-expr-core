@@ -1,7 +1,7 @@
 use crate::ast::{AtomKind, Node};
 use crate::dialect::DialectConfig;
 use crate::error::{ErrorDetails, LimitKind, ParseError, ParseErrorCode};
-use crate::lexer::{Lexer, TokenKind};
+use crate::lexer::{Lexer, Token, TokenKind};
 use crate::limits::Limits;
 use crate::span::{Position, Span};
 use crate::trivia::Comment;
@@ -35,6 +35,101 @@ pub fn parse_with_trivia(
     parse_with_limit_inner(input, dialect, &dialect.limits, true)
 }
 
+fn handle_token(
+    token: Token,
+    roots: &mut Vec<Node>,
+    stack: &mut Vec<(Vec<Node>, Position)>,
+    total_nodes: &mut usize,
+    limits: &Limits,
+) -> Result<(), ParseError> {
+    match token.kind {
+        TokenKind::LParen => {
+            enforce_depth_limit(stack, limits, token.span)?;
+            stack.push((Vec::new(), token.span.start));
+        }
+        TokenKind::RParen => {
+            let (children, start_pos) = stack.pop().ok_or_else(|| {
+                ParseError::with_details(
+                    ParseErrorCode::UnbalancedParen,
+                    "Unmatched closing parenthesis",
+                    token.span,
+                    ErrorDetails {
+                        expected: vec![
+                            "atom".to_string(),
+                            "list".to_string(),
+                            "end-of-input".to_string(),
+                        ],
+                        found: Some(")".to_string()),
+                    },
+                )
+            })?;
+
+            let span = Span::new(start_pos, token.span.end);
+            let node = Node::list(children, span);
+            *total_nodes = total_nodes
+                .checked_add(1)
+                .ok_or_else(|| limit_overflow_error(LimitKind::NodeCount, span))?;
+            enforce_node_limit(*total_nodes, limits, span)?;
+
+            if let Some((ref mut parent_children, _)) = stack.last_mut() {
+                enforce_list_length_limit(parent_children.len() + 1, limits, span)?;
+                parent_children.push(node);
+            } else {
+                roots.push(node);
+            }
+        }
+        TokenKind::Symbol(s) => push_atom(
+            AtomKind::Symbol(s),
+            token.span,
+            roots,
+            stack,
+            total_nodes,
+            limits,
+        )?,
+        TokenKind::Integer(i) => push_atom(
+            AtomKind::Integer(i),
+            token.span,
+            roots,
+            stack,
+            total_nodes,
+            limits,
+        )?,
+        TokenKind::Float(f) => push_atom(
+            AtomKind::Float(f),
+            token.span,
+            roots,
+            stack,
+            total_nodes,
+            limits,
+        )?,
+        TokenKind::String(s) => push_atom(
+            AtomKind::String(s),
+            token.span,
+            roots,
+            stack,
+            total_nodes,
+            limits,
+        )?,
+        TokenKind::Boolean(b) => push_atom(
+            AtomKind::Boolean(b),
+            token.span,
+            roots,
+            stack,
+            total_nodes,
+            limits,
+        )?,
+        TokenKind::Keyword(k) => push_atom(
+            AtomKind::Keyword(k),
+            token.span,
+            roots,
+            stack,
+            total_nodes,
+            limits,
+        )?,
+    }
+    Ok(())
+}
+
 fn parse_with_limit_inner(
     input: &str,
     dialect: &DialectConfig,
@@ -47,113 +142,7 @@ fn parse_with_limit_inner(
     let mut total_nodes: usize = 0;
 
     while let Some(token) = lexer.next_token()? {
-        match token.kind {
-            TokenKind::LParen => {
-                enforce_depth_limit(&stack, limits, token.span)?;
-                // start a new list frame
-                stack.push((Vec::new(), token.span.start));
-            }
-            TokenKind::RParen => {
-                let (children, start_pos) = match stack.pop() {
-                    Some(frame) => frame,
-                    None => {
-                        return Err(ParseError::with_details(
-                            ParseErrorCode::UnbalancedParen,
-                            "Unmatched closing parenthesis",
-                            token.span,
-                            ErrorDetails {
-                                expected: vec![
-                                    "atom".to_string(),
-                                    "list".to_string(),
-                                    "end-of-input".to_string(),
-                                ],
-                                found: Some(")".to_string()),
-                            },
-                        ));
-                    }
-                };
-
-                let span = Span::new(start_pos, token.span.end);
-                let node = Node::list(children, span);
-                total_nodes = total_nodes
-                    .checked_add(1)
-                    .ok_or_else(|| limit_overflow_error(LimitKind::NodeCount, span))?;
-                enforce_node_limit(total_nodes, limits, span)?;
-
-                if let Some((ref mut parent_children, _)) = stack.last_mut() {
-                    enforce_list_length_limit(parent_children.len() + 1, limits, span)?;
-                    parent_children.push(node);
-                } else {
-                    roots.push(node);
-                }
-            }
-            TokenKind::Symbol(s) => {
-                let atom = AtomKind::Symbol(s);
-                push_atom(
-                    atom,
-                    token.span,
-                    &mut roots,
-                    &mut stack,
-                    &mut total_nodes,
-                    limits,
-                )?;
-            }
-            TokenKind::Integer(i) => {
-                let atom = AtomKind::Integer(i);
-                push_atom(
-                    atom,
-                    token.span,
-                    &mut roots,
-                    &mut stack,
-                    &mut total_nodes,
-                    limits,
-                )?;
-            }
-            TokenKind::Float(f) => {
-                let atom = AtomKind::Float(f);
-                push_atom(
-                    atom,
-                    token.span,
-                    &mut roots,
-                    &mut stack,
-                    &mut total_nodes,
-                    limits,
-                )?;
-            }
-            TokenKind::String(s) => {
-                let atom = AtomKind::String(s);
-                push_atom(
-                    atom,
-                    token.span,
-                    &mut roots,
-                    &mut stack,
-                    &mut total_nodes,
-                    limits,
-                )?;
-            }
-            TokenKind::Boolean(b) => {
-                let atom = AtomKind::Boolean(b);
-                push_atom(
-                    atom,
-                    token.span,
-                    &mut roots,
-                    &mut stack,
-                    &mut total_nodes,
-                    limits,
-                )?;
-            }
-            TokenKind::Keyword(k) => {
-                let atom = AtomKind::Keyword(k);
-                push_atom(
-                    atom,
-                    token.span,
-                    &mut roots,
-                    &mut stack,
-                    &mut total_nodes,
-                    limits,
-                )?;
-            }
-        }
+        handle_token(token, &mut roots, &mut stack, &mut total_nodes, limits)?;
     }
 
     if let Some((_, start_pos)) = stack.pop() {

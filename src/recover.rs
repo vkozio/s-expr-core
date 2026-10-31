@@ -33,78 +33,8 @@ pub fn parse_recovering(input: &str, dialect: &DialectConfig) -> Recovered {
 
     let mut i = 0;
     while i < items.len() {
-        match &items[i] {
-            ScanItem::RecordError(err) => {
-                ctx.errors.push(err.clone());
-                i += 1;
-            }
-            ScanItem::LexError { err } => {
-                let span = err.span;
-                let raw = input[span.start.byte as usize..span.end.byte as usize].to_string();
-                ctx.errors.push(err.clone());
-                let node = Node {
-                    expr: Expr::Error(raw),
-                    span,
-                };
-                ctx.place_node(node);
-                i += 1;
-            }
-            ScanItem::Token(tok) => match tok.kind {
-                TokenKind::LParen => {
-                    let depth = ctx.stack.len() + 1;
-                    if let Some(max) = dialect.limits.max_depth {
-                        if depth > max {
-                            ctx.errors.push(limit_error(
-                                LimitKind::Depth,
-                                format!("Maximum list nesting depth {} exceeded", max),
-                                tok.span,
-                            ));
-                            let (raw, end_pos, next_i) =
-                                skip_group(input, &items, tok.span, i + 1, eof);
-                            let span = Span::new(tok.span.start, end_pos);
-                            let node = Node {
-                                expr: Expr::Error(raw),
-                                span,
-                            };
-                            ctx.place_node(node);
-                            i = next_i;
-                            continue;
-                        }
-                    }
-                    ctx.stack.push(Frame {
-                        children: Vec::new(),
-                        open: tok.span,
-                    });
-                    i += 1;
-                }
-                TokenKind::RParen => {
-                    if let Some(frame) = ctx.stack.pop() {
-                        let span = Span::new(frame.open.start, tok.span.end);
-                        let node = Node::list(frame.children, span);
-                        ctx.place_node(node);
-                    } else {
-                        ctx.errors.push(ParseError::with_details(
-                            ParseErrorCode::UnbalancedParen,
-                            "Unmatched closing parenthesis",
-                            tok.span,
-                            ErrorDetails {
-                                expected: vec![
-                                    "atom".to_string(),
-                                    "list".to_string(),
-                                    "end-of-input".to_string(),
-                                ],
-                                found: Some(")".to_string()),
-                            },
-                        ));
-                    }
-                    i += 1;
-                }
-                ref kind => {
-                    ctx.place_atom(atom_kind(kind), tok.span);
-                    i += 1;
-                }
-            },
-        }
+        let (next_i, _) = ctx.process_item(&items, i, eof);
+        i = next_i;
     }
 
     // EOF inside lists: report an UnbalancedParen error at every open paren in source
@@ -159,6 +89,80 @@ struct ParserCtx<'a> {
 }
 
 impl<'a> ParserCtx<'a> {
+    fn process_item(&mut self, items: &[ScanItem], i: usize, eof: Position) -> (usize, bool) {
+        match &items[i] {
+            ScanItem::RecordError(err) => {
+                self.errors.push(err.clone());
+                (i + 1, false)
+            }
+            ScanItem::LexError { err } => {
+                let span = err.span;
+                let raw = self.input[span.start.byte as usize..span.end.byte as usize].to_string();
+                self.errors.push(err.clone());
+                let node = Node {
+                    expr: Expr::Error(raw),
+                    span,
+                };
+                self.place_node(node);
+                (i + 1, false)
+            }
+            ScanItem::Token(tok) => match tok.kind {
+                TokenKind::LParen => {
+                    let depth = self.stack.len() + 1;
+                    if let Some(max) = self.dialect.limits.max_depth {
+                        if depth > max {
+                            self.errors.push(limit_error(
+                                LimitKind::Depth,
+                                format!("Maximum list nesting depth {} exceeded", max),
+                                tok.span,
+                            ));
+                            let (raw, end_pos, next_i) =
+                                skip_group(self.input, items, tok.span, i + 1, eof);
+                            let span = Span::new(tok.span.start, end_pos);
+                            let node = Node {
+                                expr: Expr::Error(raw),
+                                span,
+                            };
+                            self.place_node(node);
+                            return (next_i, false);
+                        }
+                    }
+                    self.stack.push(Frame {
+                        children: Vec::new(),
+                        open: tok.span,
+                    });
+                    (i + 1, false)
+                }
+                TokenKind::RParen => {
+                    if let Some(frame) = self.stack.pop() {
+                        let span = Span::new(frame.open.start, tok.span.end);
+                        let node = Node::list(frame.children, span);
+                        self.place_node(node);
+                    } else {
+                        self.errors.push(ParseError::with_details(
+                            ParseErrorCode::UnbalancedParen,
+                            "Unmatched closing parenthesis",
+                            tok.span,
+                            ErrorDetails {
+                                expected: vec![
+                                    "atom".to_string(),
+                                    "list".to_string(),
+                                    "end-of-input".to_string(),
+                                ],
+                                found: Some(")".to_string()),
+                            },
+                        ));
+                    }
+                    (i + 1, false)
+                }
+                ref kind => {
+                    self.place_atom(atom_kind(kind), tok.span);
+                    (i + 1, false)
+                }
+            },
+        }
+    }
+
     fn place_atom(&mut self, atom: AtomKind, span: Span) {
         let node = Node::atom(atom, span);
         self.place_node(node);
@@ -247,7 +251,7 @@ impl<'a> Scanner<'a> {
             } else {
                 self.pos.column += 1;
             }
-            self.pos.byte = (idx + ch.len_utf8()) as u32;
+            self.pos.byte = u32::try_from(idx + ch.len_utf8()).unwrap_or(u32::MAX);
         }
         self.lookahead = self.iter.next();
         current
