@@ -26,4 +26,4 @@ pub use crate::parser::{parse, parse_with_dialect, parse_with_limit, parse_with_
 pub use crate::pretty::{pretty_print, pretty_print_with_comments};
 pub use crate::recover::{parse_recovering, Recovered};
 pub use crate::span::{Position, Span};
-pub use crate::trivia::Comment;
+pub use crate::trivia::{Comment, CommentKind};

@@ -1,9 +1,9 @@
 use crate::ast::{AtomKind, Expr, Node};
-use crate::dialect::DialectConfig;
+use crate::dialect::{DialectConfig, BLOCK_COMMENT_CLOSE, BLOCK_COMMENT_OPEN};
 use crate::error::{ErrorDetails, LimitKind, ParseError, ParseErrorCode};
 use crate::lexer::{Token, TokenKind};
 use crate::span::{Position, Span};
-use crate::trivia::Comment;
+use crate::trivia::{Comment, CommentKind};
 
 /// Result of a recovering parse: a tree plus all accumulated errors.
 pub struct Recovered {
@@ -257,11 +257,24 @@ impl<'a> Scanner<'a> {
         self.lookahead
     }
 
+    /// Whether the upcoming input starts with `s` (without consuming it).
+    fn starts_with(&self, s: &str) -> bool {
+        let mut it = self.iter.clone();
+        let mut nxt = self.lookahead;
+        for want in s.chars() {
+            match nxt {
+                Some((_, c)) if c == want => nxt = it.next(),
+                _ => return false,
+            }
+        }
+        true
+    }
+
     fn span_from(&self, start: Position) -> Span {
         Span::new(start, self.pos)
     }
 
-    fn skip_whitespace_and_comments(&mut self, comments: &mut Vec<Comment>) {
+    fn skip_whitespace_and_comments(&mut self, comments: &mut Vec<Comment>) -> Option<ParseError> {
         loop {
             let mut advanced = false;
             while let Some((_, ch)) = self.peek() {
@@ -291,6 +304,7 @@ impl<'a> Scanner<'a> {
                         }
                         let end = self.pos;
                         comments.push(Comment {
+                            kind: CommentKind::Line,
                             text,
                             span: Span::new(start, end),
                         });
@@ -299,17 +313,61 @@ impl<'a> Scanner<'a> {
                 }
             }
 
+            if self.dialect.enable_block_comments && self.starts_with(BLOCK_COMMENT_OPEN) {
+                let start = self.pos;
+                self.bump();
+                self.bump();
+                let mut depth = 1usize;
+                let mut text = String::new();
+                loop {
+                    if self.starts_with(BLOCK_COMMENT_OPEN) {
+                        depth += 1;
+                        self.bump();
+                        self.bump();
+                        text.push_str(BLOCK_COMMENT_OPEN);
+                    } else if self.starts_with(BLOCK_COMMENT_CLOSE) {
+                        depth -= 1;
+                        self.bump();
+                        self.bump();
+                        if depth == 0 {
+                            break;
+                        }
+                        text.push_str(BLOCK_COMMENT_CLOSE);
+                    } else if let Some((_, ch)) = self.peek() {
+                        self.bump();
+                        text.push(ch);
+                    } else {
+                        let span = Span::new(start, self.pos);
+                        return Some(ParseError::new(
+                            ParseErrorCode::UnterminatedBlockComment,
+                            "Unterminated block comment",
+                            span,
+                        ));
+                    }
+                }
+                let end = self.pos;
+                comments.push(Comment {
+                    kind: CommentKind::Block,
+                    text,
+                    span: Span::new(start, end),
+                });
+                advanced = true;
+            }
+
             if !advanced {
                 break;
             }
         }
+        None
     }
 
     fn scan_all(&mut self) -> (Vec<ScanItem>, Vec<Comment>) {
         let mut items = Vec::new();
         let mut comments = Vec::new();
         loop {
-            self.skip_whitespace_and_comments(&mut comments);
+            if let Some(err) = self.skip_whitespace_and_comments(&mut comments) {
+                items.push(ScanItem::RecordError(err));
+            }
             let (_, ch) = match self.peek() {
                 Some(pair) => pair,
                 None => break,
@@ -425,7 +483,9 @@ impl<'a> Scanner<'a> {
                     if !ch.is_whitespace()
                         && ch != '('
                         && ch != ')'
-                        && (!self.dialect.enable_comments || ch != self.dialect.comment_prefix) =>
+                        && (!self.dialect.enable_comments || ch != self.dialect.comment_prefix)
+                        && !(self.dialect.enable_block_comments
+                            && self.starts_with(BLOCK_COMMENT_OPEN)) =>
                 {
                     self.bump();
                     buf.push(ch);

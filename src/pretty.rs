@@ -1,5 +1,5 @@
 use crate::ast::{AtomKind, Expr, Node};
-use crate::trivia::Comment;
+use crate::trivia::{Comment, CommentKind};
 
 /// Canonical pretty-printer for S-expression trees.
 ///
@@ -110,10 +110,17 @@ pub fn pretty_print_with_comments(nodes: &[Node], comments: &[Comment]) -> Strin
         fmt_node(node, &comments, &mut cursor, 0, &mut lines);
     }
     while cursor < comments.len() {
-        lines.push(format!(";{}", comments[cursor].text));
+        lines.push(comment_str("", &comments[cursor]));
         cursor += 1;
     }
     lines.join("\n")
+}
+
+fn comment_str(indent: &str, c: &Comment) -> String {
+    match c.kind {
+        CommentKind::Line => format!("{indent};{}", c.text),
+        CommentKind::Block => format!("{indent}#|{}|#", c.text),
+    }
 }
 
 fn fmt_node(
@@ -125,7 +132,7 @@ fn fmt_node(
 ) {
     let indent = indent_str(depth);
     while *cursor < comments.len() && comments[*cursor].span.end.byte <= node.span.start.byte {
-        lines.push(format!("{indent};{}", comments[*cursor].text));
+        lines.push(comment_str(&indent, &comments[*cursor]));
         *cursor += 1;
     }
     let inner_comment =
@@ -161,11 +168,7 @@ fn fmt_node(
     }
     let mut last_is_comment = false;
     while *cursor < comments.len() && comments[*cursor].span.start.byte < node.span.end.byte {
-        lines.push(format!(
-            "{};{}",
-            indent_str(depth + 1),
-            comments[*cursor].text
-        ));
+        lines.push(comment_str(&indent_str(depth + 1), &comments[*cursor]));
         *cursor += 1;
         last_is_comment = true;
     }

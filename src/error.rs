@@ -14,6 +14,7 @@ pub enum ParseErrorCode {
     UnexpectedEof,
     UnbalancedParen,
     UnterminatedString,
+    UnterminatedBlockComment,
     InvalidAtom,
     LimitExceeded(LimitKind),
 }
