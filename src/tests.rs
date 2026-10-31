@@ -166,3 +166,26 @@ fn pretty_print_produces_canonical_whitespace() {
     let printed = pretty_print(&nodes);
     assert_eq!(printed, "(foo 1 \"bar\" (true :kw))");
 }
+
+#[test]
+fn node_accessors_decode_atom_kinds() {
+    let list = parse("(a \"s\" 5 :kw true)").expect("parse ok");
+    let children = list[0].as_list().expect("list");
+    assert!(!children[0].is_list());
+    assert_eq!(children[0].as_symbol(), Some("a"));
+    assert_eq!(children[1].as_string(), Some("s"));
+    assert_eq!(children[2].as_integer(), Some(5));
+    assert_eq!(children[3].as_keyword(), Some("kw"));
+    assert_eq!(children[4].as_bool(), Some(true));
+    assert_eq!(children[3].as_symbol(), None);
+    assert_eq!(children[0].as_keyword(), None);
+}
+
+#[test]
+fn escape_string_roundtrips_through_parser() {
+    let s = "a\\b\nc\rd\te";
+    let escaped = crate::pretty::escape_string(s);
+    let src = format!("(\"{escaped}\")");
+    let nodes = parse(&src).expect("parse ok");
+    assert_eq!(nodes[0].as_list().unwrap()[0].as_string(), Some(s));
+}

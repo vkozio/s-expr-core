@@ -130,8 +130,8 @@ fn block_comments_roundtrip_through_pretty_with_comments() {
     assert_eq!(comments.len(), 1);
     assert_eq!(comments[0].kind, s_expr_core::CommentKind::Block);
     let printed = pretty_print_with_comments(&nodes, &comments);
-    let (nodes2, comments2) = parse_with_trivia(&printed, &s_expr_core::DialectConfig::default())
-        .expect("reparse ok");
+    let (nodes2, comments2) =
+        parse_with_trivia(&printed, &s_expr_core::DialectConfig::default()).expect("reparse ok");
     fn syms(ns: &[Node]) -> Vec<&str> {
         match &ns[0].expr {
             Expr::List(children) => children
@@ -144,9 +144,17 @@ fn block_comments_roundtrip_through_pretty_with_comments() {
             _ => Vec::new(),
         }
     }
-    assert_eq!(syms(&nodes), syms(&nodes2), "nodes differ; printed:\n{printed}");
+    assert_eq!(
+        syms(&nodes),
+        syms(&nodes2),
+        "nodes differ; printed:\n{printed}"
+    );
     let body = |c: &s_expr_core::Comment| (c.kind, c.text.clone());
-    assert_eq!(comments.iter().map(body).collect::<Vec<_>>(), comments2.iter().map(body).collect::<Vec<_>>(), "comments differ; printed:\n{printed}");
+    assert_eq!(
+        comments.iter().map(body).collect::<Vec<_>>(),
+        comments2.iter().map(body).collect::<Vec<_>>(),
+        "comments differ; printed:\n{printed}"
+    );
 }
 
 #[test]

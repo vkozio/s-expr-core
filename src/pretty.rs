@@ -35,36 +35,30 @@ fn fmt_expr(expr: &Expr, out: &mut String) {
     }
 }
 
+/// Escape `s` as the contents of a double-quoted string literal in the
+/// s-expr dialect: `"` → `\"`, `\` → `\\`, `\n`/`\r`/`\t` → backslash
+/// escapes. The surrounding quotes are not included.
+pub fn escape_string(s: &str) -> String {
+    let mut out = String::with_capacity(s.len() + 2);
+    for ch in s.chars() {
+        match ch {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            other => out.push(other),
+        }
+    }
+    out
+}
+
 fn fmt_atom(atom: &AtomKind, out: &mut String) {
     match atom {
         AtomKind::Symbol(s) => out.push_str(s),
         AtomKind::String(s) => {
             out.push('"');
-            for ch in s.chars() {
-                match ch {
-                    '"' => {
-                        out.push('\\');
-                        out.push('"');
-                    }
-                    '\\' => {
-                        out.push('\\');
-                        out.push('\\');
-                    }
-                    '\n' => {
-                        out.push('\\');
-                        out.push('n');
-                    }
-                    '\r' => {
-                        out.push('\\');
-                        out.push('r');
-                    }
-                    '\t' => {
-                        out.push('\\');
-                        out.push('t');
-                    }
-                    other => out.push(other),
-                }
-            }
+            out.push_str(&escape_string(s));
             out.push('"');
         }
         AtomKind::Integer(i) => {
