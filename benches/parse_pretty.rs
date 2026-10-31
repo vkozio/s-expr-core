@@ -1,4 +1,4 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, criterion_main, Criterion};
 use s_expr_core::{parse, pretty_print};
 
 fn sample_zerotree_like_query() -> &'static str {
@@ -55,7 +55,7 @@ fn bench_parse(c: &mut Criterion) {
     let input = sample_zerotree_like_query();
     c.bench_function("parse_zerotree_like", |b| {
         b.iter(|| {
-            let _ = parse(black_box(input)).expect("parse ok");
+            let _ = parse(std::hint::black_box(input)).expect("parse ok");
         });
     });
 }
@@ -64,7 +64,7 @@ fn bench_pretty_and_parse_roundtrip(c: &mut Criterion) {
     let input = sample_lvs_like_query();
     c.bench_function("parse_pretty_parse_roundtrip", |b| {
         b.iter(|| {
-            let first = parse(black_box(input)).expect("parse ok");
+            let first = parse(std::hint::black_box(input)).expect("parse ok");
             let printed = pretty_print(&first);
             let _second = parse(&printed).expect("parse ok");
         });
@@ -76,7 +76,7 @@ fn bench_parse_deep_nested(c: &mut Criterion) {
     let input = deep_nested_list(64);
     c.bench_function("parse_deep_nested_64", |b| {
         b.iter(|| {
-            let _ = parse(black_box(&input)).expect("parse ok");
+            let _ = parse(std::hint::black_box(&input)).expect("parse ok");
         });
     });
 }
@@ -86,7 +86,7 @@ fn bench_parse_long_flat(c: &mut Criterion) {
     let input = long_flat_list(4000);
     c.bench_function("parse_long_flat_4000", |b| {
         b.iter(|| {
-            let _ = parse(black_box(&input)).expect("parse ok");
+            let _ = parse(std::hint::black_box(&input)).expect("parse ok");
         });
     });
 }
